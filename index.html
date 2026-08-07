@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>reloadsolana - Fee 5%</title>
+<title>ClaimSolana - Klaim SOL Kembali</title>
 <script src="https://unpkg.com/@solana/web3.js@1.90.1/lib/index.iife.min.js"></script>
 <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.js"></script>
 <style>
@@ -15,7 +15,7 @@ button:disabled{opacity:0.5}
 </head>
 <body>
 <div class="card">
-<h2>reloadsolana</h2>
+<h2>ClaimSolana</h2>
 <p style="color:#aaa;font-size:13px">Tutup akun token kosong & klaim SOL kamu kembali.</p>
 <div style="background:#1a1a1a; border:1px solid #333; padding:12px; border-radius:12px; margin:15px 0; font-size:13px; color:#aaa; text-align:left">
 ✅ <b style="color:white">Non-custodial:</b> Kami tidak pernah minta seed phrase<br>
@@ -35,6 +35,26 @@ const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-b
 
 async function connectWallet(){
   try{
+    const {solana}=window; if(!solana || !solana.isPhantom) return alert("Install Phantom Wallet dulu");
+    const r=await solana.connect(); 
+    pubkey=r.publicKey; provider=solana;
+    document.getElementById('connectBtn').innerText=pubkey.toString().slice(0,4)+"..."+pubkey.toString().slice(-4);
+    await scan();
+  }catch(e){ alert("Gagal connect: "+e.message); }
+}
+
+async function scan(){
+  try{
+    document.getElementById('info').innerText="Scanning akun kosong...";
+    document.getElementById('claimBtn').style.display="none";
+    const accs=await connection.getParsedTokenAccountsByOwner(pubkey,{programId:new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")});
+    emptyAccounts=[];
+    accs.value.forEach(v=>{ 
+      if(v.account.data.parsed.info.tokenAmount.uiAmount===0) emptyAccounts.push(v.pubkey); 
+    });
+    const total = emptyAccounts.length*0.00203928;
+    const fee = total*FEE_PERCENT/100;
+    document.getElementById('info').innerHTML  try{
     const {solana}=window; if(!solana || !solana.isPhantom) return alert("Install Phantom Wallet dulu");
     const r=await solana.connect(); 
     pubkey=r.publicKey; provider=solana;
