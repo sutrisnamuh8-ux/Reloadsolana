@@ -1,40 +1,111 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClaimSolana - Klaim SOL Gratis</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClaimSolana - Klaim SOL Kamu</title>
 <script src="https://unpkg.com/@solana/web3.js@1.90.1/lib/index.iife.min.js"></script>
 <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.js"></script>
 <style>
 body{font-family:Arial;background:#0f0f0f;color:#fff;display:flex;justify-content:center;padding:20px}
 .card{background:#1a1a1a;padding:25px;border-radius:16px;max-width:430px;width:100%;text-align:center}
 button{background:#9945FF;color:#fff;border:0;padding:12px;border-radius:10px;width:100%;margin-top:12px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:0.5}
-#info{font-size:14px;line-height:1.6}
+button:disabled{opacity:0.5;cursor:not-allowed}
+#info{font-size:14px;line-height:1.6;margin-top:15px}
 </style>
 </head>
 <body>
 <div class="card">
 <h2>ClaimSolana</h2>
 <p style="color:#aaa;font-size:13px">Tutup akun token kosong & klaim SOL kamu kembali.</p>
-<div style="background:#1a1a1a; border:1px solid #333; padding:12px; border-radius:12px; margin:15px 0; font-size:13px; color:#aaa; text-align:left">
-✅ <b style="color:white">Non-custodial:</b> Kami tidak pernah minta seed phrase<br>
-✅ <b style="color:white">Transparan:</b> Fee 5% hanya dari SOL yang berhasil di-reclaim<br>
-✅ <b style="color:white">Aman:</b> Transaksi bisa di-preview di Phantom sebelum approve
+<div style="background:#222;border:1px solid #333;padding:12px;border-radius:12px;margin:15px 0;font-size:13px;color:#aaa;text-align:left">
+✅ <b style="color:#fff">Non-custodial:</b> Tidak minta seed phrase<br>
+✅ <b style="color:#fff">Transparan:</b> Fee 5% dari hasil reclaim<br>
+✅ <b style="color:#fff">Aman:</b> Preview di Phantom
 </div>
 <button id="connectBtn">Connect Phantom</button>
-<div id="info" style="margin-top:15px">Belum connect</div>
-<button id="claimBtn" style="display:none">Klaim Sekarang</button>
+<div id="info">Belum connect</div>
+<div id="disclaimerBox" style="display:none;background:#2a1a00;border:1px solid #665500;padding:12px;border-radius:10px;margin-top:15px;text-align:left;font-size:12px;color:#ffcc66">
+<b style="color:#ffaa00">⚠️ DISCLAIMER:</b><br>
+1. Hanya menutup akun SPL Token saldo 0.<br>
+2. TIDAK perlu kosongkan wallet SOL, sisakan 0.01 SOL untuk gas.<br>
+3. Hasil = 0.00203 SOL per akun kosong.<br>
+4. Selalu cek preview di Phantom sebelum approve.
 </div>
-
+<label id="agreeLabel" style="display:none;gap:8px;margin-top:12px;font-size:12px;text-align:left;cursor:pointer;align-items:flex-start">
+<input type="checkbox" id="agreeCheck"><span>Saya paham, ini hanya menutup akun token kosong.</span>
+</label>
+<button id="claimBtn" style="display:none" disabled>Klaim Sekarang</button>
+</div>
 <script>
 const FEE_WALLET_STR = "HptgriUnvav3AitnWf5DWinZ7gncB5GMwMgaTFuUPNdr";
 const FEE_PERCENT = 5;
-let pubkey, provider, emptyAccounts=[];
-const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'),'confirmed');
+let pubkey, provider, emptyAccounts = [];
+const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
 
 async function connectWallet(){
   try{
+    const {solana} = window;
+    if(!solana || !solana.isPhantom) return alert("Install Phantom dulu");
+    const r = await solana.connect();
+    pubkey = r.publicKey; provider = solana;
+    document.getElementById('connectBtn').innerText = pubkey.toString().slice(0,4)+"..."+pubkey.toString().slice(-4);
+    await scan();
+  }catch(e){ alert("Gagal connect: "+e.message); }
+}
+
+async function scan(){
+  try{
+    document.getElementById('info').innerText = "Scanning akun kosong...";
+    document.getElementById('claimBtn').style.display = "none";
+    document.getElementById('disclaimerBox').style.display = "none";
+    document.getElementById('agreeLabel').style.display = "none";
+    const accs = await connection.getParsedTokenAccountsByOwner(pubkey, {programId: new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")});
+    emptyAccounts = [];
+    accs.value.forEach(v=>{ if(v.account.data.parsed.info.tokenAmount.uiAmount===0) emptyAccounts.push(v.pubkey); });
+    const total = emptyAccounts.length*0.00203928;
+    const fee = total*FEE_PERCENT/100;
+    document.getElementById('info').innerHTML = `Akun kosong: <b>${emptyAccounts.length}</b><br>Total balik: ${total.toFixed(5)} SOL<br>Fee ${FEE_PERCENT}%: ${fee.toFixed(5)} SOL<br>Kamu terima: <b>${(total-fee).toFixed(5)} SOL</b>`;
+    if(emptyAccounts.length>0){
+      document.getElementById('disclaimerBox').style.display="block";
+      document.getElementById('agreeLabel').style.display="flex";
+      document.getElementById('claimBtn').style.display="block";
+    }
+  }catch(e){ document.getElementById('info').innerText="Gagal scan: "+e.message; }
+}
+
+async function claim(){
+  const btn = document.getElementById('claimBtn');
+  try{
+    btn.disabled=true; btn.innerText="Proses...";
+    const feeWallet = new solanaWeb3.PublicKey(FEE_WALLET_STR);
+    let tx = new solanaWeb3.Transaction();
+    const toClose = emptyAccounts.slice(0,5);
+    toClose.forEach(a=>{ tx.add(splToken.Token.createCloseAccountInstruction(splToken.TOKEN_PROGRAM_ID, a, pubkey, pubkey, [])); });
+    const feeLamports = Math.floor(toClose.length*2039280*FEE_PERCENT/100);
+    if(feeLamports>0) tx.add(solanaWeb3.SystemProgram.transfer({fromPubkey:pubkey,toPubkey:feeWallet,lamports:feeLamports}));
+    tx.feePayer=pubkey;
+    tx.recentBlockhash=(await connection.getLatestBlockhash('confirmed')).blockhash;
+    const signed = await provider.signTransaction(tx);
+    const sig = await connection.sendRawTransaction(signed.serialize());
+    await connection.confirmTransaction(sig,'confirmed');
+    alert("Berhasil! Tx: "+sig);
+    emptyAccounts = emptyAccounts.slice(5);
+    document.getElementById('agreeCheck').checked=false;
+    btn.disabled=true;
+    await scan();
+  }catch(e){ alert("Gagal klaim: "+e.message); }
+  finally{ btn.innerText="Klaim Sekarang"; if(!document.getElementById('agreeCheck').checked) btn.disabled=true; }
+}
+
+document.getElementById('connectBtn').onclick = connectWallet;
+document.getElementById('claimBtn').onclick = claim;
+document.getElementById('agreeCheck').onchange = e => {
+  document.getElementById('claimBtn').disabled = !e.target.checked;
+};
+</script>
+</body>
+</html>  try{
     const {solana}=window; if(!solana || !solana.isPhantom) return alert("Install Phantom Wallet dulu");
     const r=await solana.connect(); 
     pubkey=r.publicKey; provider=solana;
