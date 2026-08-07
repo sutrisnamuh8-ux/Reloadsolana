@@ -10,16 +10,29 @@
 body{font-family:Arial;background:#0f0f0f;color:#fff;display:flex;justify-content:center;padding:20px}
 .card{background:#1a1a1a;padding:25px;border-radius:16px;max-width:430px;width:100%;text-align:center}
 button{background:#9945FF;color:#fff;border:0;padding:12px;border-radius:10px;width:100%;margin-top:12px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}
+button:disabled{opacity:.5}
 #info{font-size:14px;line-height:1.6;margin-top:15px}
+.logo{width:85px;height:85px;margin:10px auto 10px auto;display:block;filter:drop-shadow(0 0 12px rgba(153,69,255,0.4))}
 </style>
 </head>
 <body>
 <div class="card">
-<h2 style="margin-bottom:10px">ClaimSolana</h2>
-<div style="display:flex;justify-content:center;margin:10px 0 15px 0">
-<img src="logo.png" style="width:80px;height:80px;object-fit:contain">
-</div>
+<h2 style="margin-bottom:5px">ClaimSolana</h2>
+
+<!-- LOGO SEGITIGA FIX, TANPA FILE LUAR -->
+<svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9945FF"/>
+      <stop offset="100%" style="stop-color:#14F195"/>
+    </linearGradient>
+  </defs>
+  <!-- 3 panah muter bentuk segitiga -->
+  <path fill="url(#g)" d="M50 5 L62 28 L54 24 L48 36 L58 42 L78 32 L73 52 L50 65 L58 42 L48 36 L42 48 L32 28 Z"/>
+  <path fill="url(#g)" d="M15 78 L38 72 L33 64 L46 58 L48 70 L68 70 L62 88 L38 88 L48 70 L46 58 L36 62 L24 55 Z" opacity="0.9"/>
+  <path fill="url(#g)" d="M85 78 L62 88 L66 80 L54 70 L66 64 L68 44 L85 52 L88 78 L66 64 L54 70 L62 78 L70 84 Z" opacity="0.85"/>
+</svg>
+
 <p style="color:#aaa;font-size:13px;margin-top:0">Tutup akun token kosong & klaim SOL kembali</p>
 
 <div style="background:#222;border:1px solid #333;padding:12px;border-radius:12px;margin:15px 0;font-size:12px;color:#aaa;text-align:left">
@@ -31,6 +44,73 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <button id="connectBtn">Connect Phantom</button>
 <div id="info">Belum connect</div>
 
-<div id="disclaimerBox" style="display:none;background:#2a1a00;border:1px solid #665500;padding:12px;border-radius:10px;margin-top:15px;text-align:left;font-size:12px;color:#ff
+<div id="disclaimerBox" style="display:none;background:#2a1a00;border:1px solid #665500;padding:12px;border-radius:10px;margin-top:15px;text-align:left;font-size:12px;color:#ffcc66">
+<b style="color:#ffaa00">⚠️ DISCLAIMER:</b><br>
+1. Hanya tutup akun SPL saldo 0<br>
+2. TIDAK perlu kosongkan wallet, sisakan 0.01 SOL<br>
+3. Hasil 0.00203 SOL / akun
+</div>
+<label id="agreeLabel" style="display:none;gap:8px;margin-top:12px;font-size:12px;text-align:left;cursor:pointer"><input type="checkbox" id="agreeCheck"><span>Saya paham, hanya tutup akun kosong</span></label>
+<button id="claimBtn" style="display:none" disabled>Klaim Sekarang</button>
+</div>
 
-  
+<script>
+const FEE_WALLET_STR="HptgriUnvav3AitnWf5DWinZ7gncB5GMwMgaTFuUPNdr";
+const FEE_PERCENT=5;
+let pubkey,provider,emptyAccounts=[];
+const connection=new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'),'confirmed');
+async function connectWallet(){
+ try{
+  const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const {solana}=window;
+  if(isMobile && (!solana || !solana.isPhantom)){
+    window.location.href=`https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.origin)}`;
+    return;
+  }
+  if(!solana || !solana.isPhantom) return alert("Buka di Phantom Wallet");
+  const r=await solana.connect();pubkey=r.publicKey;provider=solana;
+  document.getElementById('connectBtn').innerText=pubkey.toString().slice(0,4)+"..."+pubkey.toString().slice(-4);
+  await scan();
+ }catch(e){alert("Gagal: "+e.message)}
+}
+async function scan(){
+ try{
+  document.getElementById('info').innerText="Scanning...";
+  document.getElementById('claimBtn').style.display="none";
+  document.getElementById('disclaimerBox').style.display="none";
+  document.getElementById('agreeLabel').style.display="none";
+  const accs=await connection.getParsedTokenAccountsByOwner(pubkey,{programId:new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")});
+  emptyAccounts=[];accs.value.forEach(v=>{if(v.account.data.parsed.info.tokenAmount.uiAmount===0)emptyAccounts.push(v.pubkey)});
+  const total=emptyAccounts.length*0.00203928;const fee=total*FEE_PERCENT/100;
+  document.getElementById('info').innerHTML=`Akun kosong: <b>${emptyAccounts.length}</b><br>Terima: <b>${(total-fee).toFixed(5)} SOL</b>`;
+  if(emptyAccounts.length>0){
+   document.getElementById('disclaimerBox').style.display="block";
+   document.getElementById('agreeLabel').style.display="flex";
+   document.getElementById('claimBtn').style.display="block";
+  }
+ }catch(e){document.getElementById('info').innerText="Gagal scan: "+e.message}
+}
+async function claim(){
+ const btn=document.getElementById('claimBtn');
+ try{
+  btn.disabled=true;btn.innerText="Proses...";
+  const feeWallet=new solanaWeb3.PublicKey(FEE_WALLET_STR);
+  let tx=new solanaWeb3.Transaction();
+  const toClose=emptyAccounts.slice(0,5);
+  toClose.forEach(a=>{tx.add(splToken.Token.createCloseAccountInstruction(splToken.TOKEN_PROGRAM_ID,a,pubkey,pubkey,[]))});
+  const feeLamports=Math.floor(toClose.length*2039280*FEE_PERCENT/100);
+  if(feeLamports>0)tx.add(solanaWeb3.SystemProgram.transfer({fromPubkey:pubkey,toPubkey:feeWallet,lamports:feeLamports}));
+  tx.feePayer=pubkey;tx.recentBlockhash=(await connection.getLatestBlockhash()).blockhash;
+  const signed=await provider.signTransaction(tx);
+  const sig=await connection.sendRawTransaction(signed.serialize());
+  await connection.confirmTransaction(sig,'confirmed');
+  alert("Berhasil! "+sig);emptyAccounts=emptyAccounts.slice(5);
+  document.getElementById('agreeCheck').checked=false;btn.disabled=true;await scan();
+ }catch(e){alert("Gagal: "+e.message)}finally{btn.innerText="Klaim Sekarang";}
+}
+document.getElementById('connectBtn').onclick=connectWallet;
+document.getElementById('claimBtn').onclick=claim;
+document.getElementById('agreeCheck').onchange=e=>{document.getElementById('claimBtn').disabled=!e.target.checked};
+</script>
+</body>
+</html>
