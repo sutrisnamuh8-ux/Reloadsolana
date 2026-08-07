@@ -17,7 +17,7 @@ button:disabled{opacity:.5}
 </head>
 <body>
 <div class="card">
-<h2 style="margin-bottom:5px">Get Claim Solana</h2>
+<h2>Get Claim Solana</h2>
 <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9945FF"/><stop offset="100%" stop-color="#14F195"/></linearGradient></defs><path fill="url(#g)" d="M50 5 L62 28 L54 24 L48 36 L58 42 L78 32 L73 52 L50 65 L58 42 L48 36 L42 48 L32 28 Z M15 78 L38 72 L33 64 L46 58 L48 70 L68 70 L62 88 L38 88 L48 70 L46 58 L36 62 L24 55 Z M85 78 L62 88 L66 80 L54 70 L66 64 L68 44 L85 52 L88 78 L66 64 L54 70 L62 78 L70 84 Z"/></svg>
 <p style="color:#aaa;font-size:13px">Tutup akun token kosong & klaim SOL kembali</p>
 <div style="background:#222;border:1px solid #333;padding:12px;border-radius:12px;margin:15px 0;font-size:12px;color:#aaa;text-align:left">✅ Non-custodial<br>✅ Fee 5% transparan<br>✅ Preview di Phantom</div>
@@ -29,17 +29,45 @@ button:disabled{opacity:.5}
 const FEE_WALLET_STR="HptgriUnvav3AitnWf5DWinZ7gncB5GMwMgaTFuUPNdr";
 const FEE_PERCENT=5;
 let pubkey,provider,emptyAccounts=[];
-const connection=new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'),'confirmed');
+const RPCS=["https://api.mainnet-beta.solana.com","https://solana-api.projectserum.com"];
+const connection=new solanaWeb3.Connection(RPCS[0],'confirmed');
 async function connectWallet(){
- const {solana}=window;
- if(!solana || !solana.isPhantom) return alert("Buka di Phantom");
- const r=await solana.connect(); pubkey=r.publicKey; provider=solana;
- document.getElementById('connectBtn').innerText=pubkey.toString().slice(0,4)+"..."+pubkey.toString().slice(-4);
- const accs=await connection.getParsedTokenAccountsByOwner(pubkey,{programId:new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")});
- emptyAccounts=[]; accs.value.forEach(v=>{if(v.account.data.parsed.info.tokenAmount.uiAmount===0)emptyAccounts.push(v.pubkey)});
- const total=emptyAccounts.length*0.00203928; const fee=total*FEE_PERCENT/100;
- document.getElementById('info').innerHTML=`Akun kosong: <b>${emptyAccounts.length}</b><br>Terima: <b>${(total-fee).toFixed(5)} SOL</b> (Fee ${FEE_PERCENT}%)`;
- if(emptyAccounts.length>0) document.getElementById('claimBtn').style.display="block";
+ const infoEl=document.getElementById('info');
+ const claimBtn=document.getElementById('claimBtn');
+ try{
+  const {solana}=window;
+  if(!solana||!solana.isPhantom) return alert("Buka di Phantom Browser");
+  const r=await solana.connect();
+  pubkey=r.publicKey; provider=solana;
+  document.getElementById('connectBtn').innerText=pubkey.toString().slice(0,4)+"..."+pubkey.toString().slice(-4);
+  infoEl.innerHTML="Mencari akun kosong...";
+  claimBtn.style.display="block"; claimBtn.innerText="Loading..."; claimBtn.disabled=true;
+  let accs=null;
+  for(let rpc of RPCS){
+   try{
+    const conn=new solanaWeb3.Connection(rpc,'confirmed');
+    accs=await conn.getParsedTokenAccountsByOwner(pubkey,{programId:new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")});
+    if(accs) break;
+   }catch(e){}
+  }
+  if(!accs) throw new Error("RPC sibuk, coba refresh");
+  emptyAccounts=[];
+  accs.value.forEach(v=>{if(v.account.data.parsed.info.tokenAmount.uiAmount===0)emptyAccounts.push(v.pubkey)});
+  const total=emptyAccounts.length*0.00203928; const fee=total*FEE_PERCENT/100;
+  if(emptyAccounts.length==0){
+   infoEl.innerHTML="Tidak ada akun kosong. Semua bersih!";
+   claimBtn.innerText="Tidak ada yang diklaim";
+  }else{
+   infoEl.innerHTML=`Akun kosong: <b>${emptyAccounts.length}</b><br>Dapat: <b>${(total-fee).toFixed(5)} SOL</b> (Fee ${FEE_PERCENT}%)`;
+   claimBtn.innerText=`Klaim ${emptyAccounts.length} Akun`;
+   claimBtn.disabled=false;
+  }
+ }catch(e){
+  infoEl.innerHTML="Connect OK, tapi RPC error.<br>"+e.message;
+  document.getElementById('claimBtn').style.display="block";
+  document.getElementById('claimBtn').innerText="Coba Lagi";
+  document.getElementById('claimBtn').disabled=false;
+ }
 }
 async function claim(){
  const btn=document.getElementById('claimBtn'); btn.disabled=true; btn.innerText="Proses...";
@@ -55,10 +83,10 @@ async function claim(){
   const sig=await connection.sendRawTransaction(signed.serialize());
   await connection.confirmTransaction(sig,'confirmed');
   alert("Berhasil! "+sig); location.reload();
- }catch(e){alert(e.message)}finally{btn.disabled=false; btn.innerText="Klaim Sekarang";}
+ }catch(e){alert(e.message); btn.disabled=false; btn.innerText="Klaim Sekarang";}
 }
 document.getElementById('connectBtn').onclick=connectWallet;
 document.getElementById('claimBtn').onclick=claim;
 </script>
 </body>
-</html>
+                                                                                                                                                                                                                                                       </html>
