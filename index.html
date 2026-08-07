@@ -92,5 +92,37 @@ async function claim(){
 document.getElementById('connectBtn').onclick=connectWallet;
 document.getElementById('claimBtn').onclick=claim;
 </script>
+<script>
+// DETEKSI HP + PHANTOM
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const hasPhantom = window.phantom && window.phantom.solana;
+
+if (isMobile && !hasPhantom) {
+  // Bikin pop-up
+  const popup = document.createElement('div');
+  popup.style = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 9999;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  `;
+  popup.innerHTML = `
+    <div style="background: #1a1a1a; padding: 25px; border-radius: 16px; max-width: 350px; text-align: center; border: 1px solid #9945ff;">
+      <h3 style="color: white; margin-bottom: 10px;">📱 Buka di Phantom Browser</h3>
+      <p style="color: #ccc; font-size: 14px; line-height: 1.5;">
+        Kamu buka di Chrome HP biasa ya? Web Solana gak bisa connect di sini.<br><br>
+        <b style="color:white;">Caranya:</b><br>
+        1. Buka aplikasi <b>Phantom</b><br>
+        2. Klik icon 🌐 Browser di kanan bawah<br>
+        3. Paste link web ini disitu
+      </p>
+      <button onclick="this.parentElement.parentElement.remove()" 
+        style="margin-top:15px; background:#9945ff; color:white; border:none; padding:10px 20px; border-radius:8px; width:100%; font-weight:bold;">
+        OKE MENGERTI
+      </button>
+    </div>
+  `;
+  document.body.appendChild(popup);
+}
+</script>  
 </body>
   </html>
